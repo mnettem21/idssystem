@@ -12,7 +12,7 @@ Development of a web-based Intrusion Detection System (IDS) development environm
   - Frontend: React
   - Database: Supabase (PostgreSQL)
   - ML Framework: IDS-ML (existing)
-  - Infrastructure: Docker, potentially cloud deployment
+  - Infrastructure: Local development with optional cloud deployment
 
 ### Core Objectives
 1. Develop web-based UI for IDS-ML framework interaction
@@ -34,7 +34,7 @@ Development of a web-based Intrusion Detection System (IDS) development environm
 - System architecture document
 - Development environment setup guide
 - Git repository with initial project structure
-- Docker configuration files
+- Development setup guide
 
 **Technical Tasks:**
 - Initialize FastAPI backend structure
@@ -261,20 +261,20 @@ CREATE TABLE training_runs (
 
 ### Week 10: Deployment & Documentation
 **Objectives:**
-- Production deployment setup
+- Simple deployment setup
 - Complete documentation
 - Knowledge transfer
 
 **Deliverables:**
-- Docker Compose configuration
-- Kubernetes manifests (optional)
+- Simple installation script
+- Quick start guide
 - User documentation
 - API documentation
 - Deployment guide
 - Video tutorials
 
 **Documentation Sections:**
-- Installation guide
+- Quick start guide
 - User manual
 - API reference
 - ML model documentation
@@ -302,8 +302,7 @@ ids-ml-backend/
 │   ├── schemas/
 │   └── services/
 ├── tests/
-├── requirements.txt
-└── Dockerfile
+└── requirements.txt
 ```
 
 ### Frontend (React)
@@ -319,8 +318,7 @@ ids-ml-frontend/
 │   ├── utils/
 │   └── styles/
 ├── public/
-├── package.json
-└── Dockerfile
+└── package.json
 ```
 
 ### Database Schema (Complete)
@@ -427,7 +425,7 @@ CREATE TABLE predictions (
 
 ### DevOps (Part-time or shared)
 - CI/CD pipeline
-- Docker/Kubernetes setup
+- Local development environment
 - Deployment configuration
 - Monitoring setup
 
@@ -465,7 +463,6 @@ CREATE TABLE predictions (
 ### B. Development Tools
 - VS Code or PyCharm
 - Postman for API testing
-- Docker Desktop
 - Git/GitHub
 - Jira or Linear for project management
 
