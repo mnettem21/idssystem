@@ -86,6 +86,42 @@ export default function CompareExperiments() {
     return chartData
   }
 
+  const getMetricRange = () => {
+    const allValues = []
+    experiments.forEach(exp => {
+      exp.results.forEach(result => {
+        allValues.push(result.accuracy * 100, result.precision * 100, result.recall * 100, result.f1_score * 100)
+      })
+    })
+
+    if (allValues.length === 0) return [0, 100]
+
+    const min = Math.min(...allValues)
+    const max = Math.max(...allValues)
+    const range = max - min
+
+    // If values are very close (within 5%), zoom in
+    if (range < 5) {
+      const padding = Math.max(0.5, range * 0.2)
+      return [Math.max(0, min - padding), Math.min(100, max + padding)]
+    }
+
+    return [0, 100]
+  }
+
+  const getBestResult = (metric) => {
+    let best = { value: 0, expName: '', modelName: '' }
+    experiments.forEach(exp => {
+      exp.results.forEach(result => {
+        const value = result[metric] * 100
+        if (value > best.value) {
+          best = { value, expName: exp.experiment.name, modelName: result.model_name }
+        }
+      })
+    })
+    return best
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900">
@@ -98,6 +134,7 @@ export default function CompareExperiments() {
   }
 
   const chartData = prepareChartData()
+  const metricRange = getMetricRange()
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -113,20 +150,53 @@ export default function CompareExperiments() {
             </div>
           ) : (
             <>
-              {/* Performance Comparison Chart */}
+              {/* Best Performers Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {['accuracy', 'precision', 'recall', 'f1_score'].map(metric => {
+                  const best = getBestResult(metric)
+                  return (
+                    <div key={metric} className="bg-gray-800 rounded-lg p-4 border-l-4 border-green-500">
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+                        Best {metric.replace('_', ' ')}
+                      </div>
+                      <div className="text-2xl font-bold text-white mb-1">
+                        {best.value.toFixed(4)}%
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {best.expName}
+                      </div>
+                      <div className="text-xs text-green-400 uppercase">
+                        {best.modelName}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Performance Comparison Chart - Zoomed */}
               <div className="bg-gray-800 shadow rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-medium text-white mb-4">Performance Metrics Comparison</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-white">Performance Metrics Comparison</h3>
+                  <div className="text-xs text-gray-400">
+                    Y-axis zoomed to show differences
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis dataKey="metric" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" domain={[0, 100]} />
+                    <YAxis
+                      stroke="#9CA3AF"
+                      domain={metricRange}
+                      tickFormatter={(value) => value.toFixed(2) + '%'}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: '#1F2937',
                         border: '1px solid #374151',
                         borderRadius: '0.375rem',
                       }}
+                      formatter={(value) => value.toFixed(4) + '%'}
                     />
                     <Legend />
                     {experiments.flatMap((exp, expIndex) =>
@@ -178,45 +248,56 @@ export default function CompareExperiments() {
                         F1 Score
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Training Time
+                        Time (s)
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
                     {experiments.flatMap((exp) =>
-                      exp.results.map((result, index) => (
-                        <tr key={`${exp.experiment.id}-${result.id}`}>
-                          {index === 0 && (
-                            <td
-                              rowSpan={exp.results.length}
-                              className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white"
-                            >
-                              {exp.experiment.name}
+                      exp.results.map((result, index) => {
+                        const isBestAccuracy = result.accuracy === Math.max(...experiments.flatMap(e => e.results.map(r => r.accuracy)))
+                        const isBestPrecision = result.precision === Math.max(...experiments.flatMap(e => e.results.map(r => r.precision)))
+                        const isBestRecall = result.recall === Math.max(...experiments.flatMap(e => e.results.map(r => r.recall)))
+                        const isBestF1 = result.f1_score === Math.max(...experiments.flatMap(e => e.results.map(r => r.f1_score)))
+                        const isFastestTime = result.training_time === Math.min(...experiments.flatMap(e => e.results.map(r => r.training_time)))
+
+                        return (
+                          <tr key={`${exp.experiment.id}-${result.id}`} className="hover:bg-gray-750">
+                            {index === 0 && (
+                              <td
+                                rowSpan={exp.results.length}
+                                className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white"
+                              >
+                                {exp.experiment.name}
+                              </td>
+                            )}
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 uppercase font-medium">
+                              {result.model_name}
                             </td>
-                          )}
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 uppercase">
-                            {result.model_name}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {(result.accuracy * 100).toFixed(2)}%
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {(result.precision * 100).toFixed(2)}%
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {(result.recall * 100).toFixed(2)}%
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {(result.f1_score * 100).toFixed(2)}%
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {result.training_time.toFixed(2)}s
-                          </td>
-                        </tr>
-                      ))
+                            <td className={`px-4 py-4 whitespace-nowrap text-sm ${isBestAccuracy ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                              {(result.accuracy * 100).toFixed(4)}%
+                            </td>
+                            <td className={`px-4 py-4 whitespace-nowrap text-sm ${isBestPrecision ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                              {(result.precision * 100).toFixed(4)}%
+                            </td>
+                            <td className={`px-4 py-4 whitespace-nowrap text-sm ${isBestRecall ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                              {(result.recall * 100).toFixed(4)}%
+                            </td>
+                            <td className={`px-4 py-4 whitespace-nowrap text-sm ${isBestF1 ? 'text-green-400 font-semibold' : 'text-gray-300'}`}>
+                              {(result.f1_score * 100).toFixed(4)}%
+                            </td>
+                            <td className={`px-4 py-4 whitespace-nowrap text-sm ${isFastestTime ? 'text-blue-400 font-semibold' : 'text-gray-300'}`}>
+                              {result.training_time.toFixed(2)}s
+                            </td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
+                <div className="mt-4 text-xs text-gray-400">
+                  <span className="text-green-400 font-semibold">Green</span> = Best performance metric • <span className="text-blue-400 font-semibold">Blue</span> = Fastest training time
+                </div>
               </div>
 
               {/* Configuration Comparison */}

@@ -5,6 +5,8 @@ from flask import Blueprint, request, jsonify, current_app
 from functools import wraps
 import threading
 import uuid
+import os
+import shutil
 from datetime import datetime
 from supabase_client import get_supabase_client, verify_token
 from ml_engine import run_ids_experiment
@@ -15,6 +17,17 @@ auth_bp = Blueprint('auth', __name__)
 
 # Store for running experiments (in-memory for now)
 running_experiments = {}
+
+
+def cleanup_catboost_info():
+    """Remove catboost_info directory if it exists"""
+    catboost_dir = os.path.join(os.path.dirname(__file__), 'catboost_info')
+    if os.path.exists(catboost_dir):
+        try:
+            shutil.rmtree(catboost_dir)
+            print(f"✓ Cleaned up catboost_info directory")
+        except Exception as e:
+            print(f"Warning: Could not remove catboost_info: {e}")
 
 
 def require_auth(f):
@@ -238,6 +251,9 @@ def run_experiment_background(experiment_id, user_id):
         print(f"EXPERIMENT {experiment_id} COMPLETED SUCCESSFULLY")
         print(f"{'='*60}\n")
 
+        # Clean up catboost_info directory
+        cleanup_catboost_info()
+
         # Remove from running experiments
         if experiment_id in running_experiments:
             del running_experiments[experiment_id]
@@ -253,6 +269,9 @@ def run_experiment_background(experiment_id, user_id):
             }).eq('id', experiment_id).execute()
         except:
             pass
+
+        # Clean up catboost_info directory
+        cleanup_catboost_info()
 
         # Remove from running experiments
         if experiment_id in running_experiments:

@@ -118,6 +118,8 @@ class LCCDEEngine:
         start_time = time.time()
 
         params = self.config.get('catboost_params', {'verbose': 0, 'boosting_type': 'Plain'})
+        # Disable file writing to prevent catboost_info directory creation
+        params['allow_writing_files'] = False
         model = cbt.CatBoostClassifier(**params)
 
         model.fit(self.X_train, self.y_train)

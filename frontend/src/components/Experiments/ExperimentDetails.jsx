@@ -4,6 +4,65 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../Layout/Navbar'
 import axios from 'axios'
 
+// Confusion Matrix Component
+function ConfusionMatrix({ matrix, attackTypes }) {
+  if (!matrix || !matrix.length) return null
+
+  const maxValue = Math.max(...matrix.flat())
+
+  const getColor = (value) => {
+    const intensity = value / maxValue
+    const r = Math.round(255 * (1 - intensity))
+    const g = Math.round(255 * (1 - intensity))
+    const b = 255
+    return `rgb(${r}, ${g}, ${b})`
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="text-xs text-gray-400 mb-2">Rows: Actual | Columns: Predicted</div>
+      <table className="min-w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="border border-gray-600 px-2 py-1 text-xs text-gray-400"></th>
+            {matrix[0].map((_, index) => {
+              const attackType = attackTypes.find((at) => at.label === index)
+              return (
+                <th key={index} className="border border-gray-600 px-2 py-1 text-xs text-gray-300">
+                  {attackType?.name || `L${index}`}
+                </th>
+              )
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {matrix.map((row, rowIndex) => {
+            const attackType = attackTypes.find((at) => at.label === rowIndex)
+            return (
+              <tr key={rowIndex}>
+                <th className="border border-gray-600 px-2 py-1 text-xs text-gray-300">
+                  {attackType?.name || `L${rowIndex}`}
+                </th>
+                {row.map((value, colIndex) => (
+                  <td
+                    key={colIndex}
+                    className="border border-gray-600 px-2 py-1 text-center text-xs font-medium text-white"
+                    style={{
+                      backgroundColor: getColor(value),
+                    }}
+                  >
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function ExperimentDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -112,6 +171,71 @@ export default function ExperimentDetails() {
     } catch (error) {
       console.error('Error deleting experiment:', error)
     }
+  }
+
+  const exportToJSON = () => {
+    const exportData = {
+      experiment: {
+        name: experiment.name,
+        description: experiment.description,
+        dataset_name: experiment.dataset_name,
+        train_size: experiment.train_size,
+        test_size: experiment.test_size,
+        random_state: experiment.random_state,
+        smote_enabled: experiment.smote_enabled,
+        smote_sampling_strategy: experiment.smote_sampling_strategy,
+        status: experiment.status,
+        created_at: experiment.created_at,
+        completed_at: experiment.completed_at,
+      },
+      results: results.map(r => ({
+        model_name: r.model_name,
+        accuracy: r.accuracy,
+        precision: r.precision,
+        recall: r.recall,
+        f1_score: r.f1_score,
+        f1_scores_per_class: r.f1_scores_per_class,
+        confusion_matrix: r.confusion_matrix,
+        training_time: r.training_time,
+      }))
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${experiment.name.replace(/\s+/g, '_')}_results.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const exportToCSV = () => {
+    const headers = ['Model', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'Training Time (s)']
+    const rows = results.map(r => [
+      r.model_name,
+      (r.accuracy * 100).toFixed(4),
+      (r.precision * 100).toFixed(4),
+      (r.recall * 100).toFixed(4),
+      (r.f1_score * 100).toFixed(4),
+      r.training_time.toFixed(2),
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${experiment.name.replace(/\s+/g, '_')}_results.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   if (loading) {
@@ -223,7 +347,23 @@ export default function ExperimentDetails() {
           {/* Results */}
           {results.length > 0 && (
             <div className="bg-gray-800 shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-white mb-4">Results</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-white">Results</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={exportToCSV}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={exportToJSON}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-medium"
+                  >
+                    Export JSON
+                  </button>
+                </div>
+              </div>
 
               <div className="space-y-6">
                 {results.map((result) => (
@@ -276,6 +416,14 @@ export default function ExperimentDetails() {
                             )
                           })}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Confusion Matrix */}
+                    {result.confusion_matrix && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-400 mb-2">Confusion Matrix</h5>
+                        <ConfusionMatrix matrix={result.confusion_matrix} attackTypes={attackTypes} />
                       </div>
                     )}
 
