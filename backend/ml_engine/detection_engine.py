@@ -15,7 +15,7 @@ class DetectionEngine:
         
         Args:
             algorithm: Algorithm name (LCCDE, XGBoost, LightGBM, CatBoost)
-            dataset_path: Path to the dataset file
+            dataset_path: Path to the dataset file (can be absolute or relative)
             parameters: Algorithm-specific parameters
             
         Returns:
@@ -24,9 +24,12 @@ class DetectionEngine:
         if algorithm not in self.supported_algorithms:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
         
-        # Construct full path
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        full_dataset_path = os.path.join(base_path, dataset_path)
+        # Use absolute path if provided, otherwise construct from base path
+        if os.path.isabs(dataset_path):
+            full_dataset_path = dataset_path
+        else:
+            base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            full_dataset_path = os.path.join(base_path, dataset_path)
         
         if not os.path.exists(full_dataset_path):
             raise FileNotFoundError(f"Dataset not found: {full_dataset_path}")

@@ -16,25 +16,28 @@ from services.database import db_service
 def seed_datasets():
     """Seed initial datasets"""
     
+    # Hard-coded absolute paths for datasets
+    BASE_PATH = '/Users/megha/Desktop/idssystem'
+    
     datasets = [
         {
             'name': 'CICIDS2017 Sample (K-means)',
             'description': 'Sampled CICIDS2017 dataset for K-means clustering experiments',
-            'file_path': 'Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample_km.csv',
+            'file_path': f'{BASE_PATH}/Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample_km.csv',
             'feature_count': 63,
             'sample_count': 22956
         },
         {
             'name': 'CICIDS2017 Sample',
             'description': 'Sampled CICIDS2017 dataset for standard ML experiments',
-            'file_path': 'Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample.csv',
+            'file_path': f'{BASE_PATH}/Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample.csv',
             'feature_count': 63,
             'sample_count': 22956
         },
         {
             'name': 'IoT 2020 Multi (5% Sample)',
             'description': 'IoT 2020 dataset sample for intrusion detection',
-            'file_path': 'Intrusion-Detection-System-Using-Machine-Learning-main/data/IoT_2020_multi_0.05.csv',
+            'file_path': f'{BASE_PATH}/Intrusion-Detection-System-Using-Machine-Learning-main/data/IoT_2020_multi_0.05.csv',
             'feature_count': 63,
             'sample_count': 50000
         }

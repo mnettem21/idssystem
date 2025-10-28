@@ -7,15 +7,39 @@ class DatabaseService:
         self.supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
     
     def get_datasets(self):
-        """Get all available datasets"""
-        response = self.supabase.table('datasets').select('*').execute()
-        return response.data
+        """Get all available datasets from local files"""
+        # Return hard-coded local datasets instead of querying Supabase
+        BASE_PATH = '/Users/megha/Desktop/idssystem'
+        
+        datasets = [
+            {
+                'id': 1,
+                'name': 'CICIDS2017 Sample (K-means)',
+                'description': 'Sampled CICIDS2017 dataset for K-means clustering experiments',
+                'file_path': f'{BASE_PATH}/Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample_km.csv',
+                'feature_count': 77,
+                'sample_count': 26800,
+                'created_at': '2025-10-27T00:00:00'
+            },
+            {
+                'id': 2,
+                'name': 'CICIDS2017 Sample',
+                'description': 'Sampled CICIDS2017 dataset for standard ML experiments',
+                'file_path': f'{BASE_PATH}/Intrusion-Detection-System-Using-Machine-Learning-main/data/CICIDS2017_sample.csv',
+                'feature_count': 77,
+                'sample_count': 26800,
+                'created_at': '2025-10-27T00:00:00'
+            }
+        ]
+        
+        return datasets
     
     def get_dataset(self, dataset_id):
-        """Get a specific dataset by ID"""
-        response = self.supabase.table('datasets').select('*').eq('id', dataset_id).execute()
-        if response.data:
-            return response.data[0]
+        """Get a specific dataset by ID from local files"""
+        datasets = self.get_datasets()
+        for dataset in datasets:
+            if dataset['id'] == int(dataset_id):
+                return dataset
         return None
     
     def create_experiment(self, user_id, name, description, dataset_id, algorithm, parameters=None):

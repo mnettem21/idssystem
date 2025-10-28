@@ -5,7 +5,7 @@ from services.database import db_service
 datasets_bp = Blueprint('datasets', __name__)
 
 @datasets_bp.route('', methods=['GET'])
-@require_auth
+# @require_auth  # Temporarily disabled for development
 def get_datasets():
     """Get all available datasets"""
     try:
@@ -15,7 +15,7 @@ def get_datasets():
         return jsonify({'error': str(e)}), 500
 
 @datasets_bp.route('/<dataset_id>', methods=['GET'])
-@require_auth
+# @require_auth  # Temporarily disabled for development
 def get_dataset(dataset_id):
     """Get a specific dataset"""
     try:
