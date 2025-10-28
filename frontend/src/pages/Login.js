@@ -82,17 +82,16 @@ const Login = () => {
         
         <p style={{ marginTop: '1rem', textAlign: 'center' }}>
           {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <a 
-            href="#" 
-            onClick={(e) => {
-              e.preventDefault();
+          <button 
+            type="button"
+            onClick={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            style={{ color: '#3498db', textDecoration: 'none' }}
+            style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
           >
             {isLogin ? 'Sign Up' : 'Login'}
-          </a>
+          </button>
         </p>
       </div>
     </div>

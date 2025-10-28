@@ -1,26 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import '../App.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const ExperimentDetail = () => {
   const { id } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [experiment, setExperiment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comparisonMode, setComparisonMode] = useState(false);
-  const [baselineId, setBaselineId] = useState('');
+  const [baselineId] = useState('');
 
-  useEffect(() => {
-    fetchExperiment();
-  }, [id]);
-
-  const fetchExperiment = async () => {
+  const fetchExperiment = React.useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/experiments/${id}`);
       setExperiment(response.data.experiment);
@@ -29,7 +23,11 @@ const ExperimentDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchExperiment();
+  }, [fetchExperiment]);
 
   const handleCompare = async () => {
     try {
