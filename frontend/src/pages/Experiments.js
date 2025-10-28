@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import '../App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const Experiments = () => {
   const { user } = useAuth();
@@ -20,8 +18,7 @@ const Experiments = () => {
 
   const fetchExperiments = async () => {
     try {
-      // Simplified - in production use proper auth
-      const response = await axios.get(`${API_URL}/experiments`);
+      const response = await api.get('/experiments');
       setExperiments(response.data.experiments || []);
     } catch (error) {
       console.error('Error fetching experiments:', error);

@@ -2,6 +2,7 @@ from supabase import create_client
 from config import Config
 import jwt
 from typing import Optional, Dict
+from datetime import datetime
 
 # Initialize Supabase client
 supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
@@ -17,15 +18,27 @@ def verify_token(token: str) -> Optional[Dict]:
         User data if valid, None otherwise
     """
     try:
-        # Get the JWT secret from Supabase
-        # This is a simplified verification - in production, you'd want to properly verify with Supabase's public key
+        # Decode the JWT token without verification (for development)
+        # In production, you should verify the signature
         decoded = jwt.decode(token, options={"verify_signature": False})
         
-        # Get user from Supabase
+        # Check if token is expired
+        exp = decoded.get('exp')
+        if exp and datetime.fromtimestamp(exp) < datetime.now():
+            return None
+        
+        # Extract user information from the token
         user_id = decoded.get('sub')
+        email = decoded.get('email')
+        
         if user_id:
-            response = supabase.auth.get_user(token)
-            return response.user.model_dump() if hasattr(response, 'user') else None
+            return {
+                'id': user_id,
+                'email': email,
+                'user_metadata': decoded.get('user_metadata', {}),
+                'role': decoded.get('role', 'authenticated')
+            }
+        
         return None
     except Exception as e:
         print(f"Token verification error: {e}")

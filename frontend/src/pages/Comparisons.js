@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import '../App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const Comparisons = () => {
   const { user } = useAuth();
@@ -20,7 +18,7 @@ const Comparisons = () => {
 
   const fetchComparisons = async () => {
     try {
-      const response = await axios.get(`${API_URL}/comparisons`);
+      const response = await api.get('/comparisons');
       setComparisons(response.data.comparisons || []);
     } catch (error) {
       console.error('Error fetching comparisons:', error);

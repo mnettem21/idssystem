@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import '../App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const NewExperiment = () => {
   const navigate = useNavigate();
@@ -25,7 +23,7 @@ const NewExperiment = () => {
 
   const fetchDatasets = async () => {
     try {
-      const response = await axios.get(`${API_URL}/datasets`);
+      const response = await api.get('/datasets');
       setDatasets(response.data.datasets || []);
     } catch (error) {
       console.error('Error fetching datasets:', error);
@@ -38,11 +36,7 @@ const NewExperiment = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/experiments`, formData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.post('/experiments', formData);
 
       if (response.data.success) {
         navigate(`/experiments/${response.data.experiment.id}`);

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import '../App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -27,7 +25,7 @@ const Dashboard = () => {
 
   const fetchExperiments = async () => {
     try {
-      const response = await axios.get(`${API_URL}/experiments`);
+      const response = await api.get('/experiments');
       
       setExperiments(response.data.experiments || []);
       

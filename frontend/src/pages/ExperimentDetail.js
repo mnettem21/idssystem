@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Navbar from '../components/Navbar';
 import '../App.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const ExperimentDetail = () => {
   const { id } = useParams();
@@ -16,7 +14,7 @@ const ExperimentDetail = () => {
 
   const fetchExperiment = React.useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/experiments/${id}`);
+      const response = await api.get(`/experiments/${id}`);
       setExperiment(response.data.experiment);
     } catch (error) {
       console.error('Error fetching experiment:', error);
@@ -31,7 +29,7 @@ const ExperimentDetail = () => {
 
   const handleCompare = async () => {
     try {
-      const response = await axios.post(`${API_URL}/comparisons`, {
+      const response = await api.post('/comparisons', {
         name: `Comparison: ${experiment.name} vs Baseline`,
         description: 'Automatic comparison',
         baseline_experiment_id: baselineId,
