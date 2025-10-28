@@ -5,15 +5,11 @@ __pycache__/
 *.so
 .Python
 venv/
-env/
-ENV/
 *.egg-info/
 dist/
 build/
 
 # Environment variables
-.env
-.env.local
 
 # IDE
 .vscode/
