@@ -10,9 +10,16 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await signOut();
+      // Clear any cached user data
+      window.localStorage.clear();
+      sessionStorage.clear();
       navigate('/login');
+      // Force page reload to ensure clean state
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if there's an error, navigate to login
+      window.location.href = '/login';
     }
   };
 
