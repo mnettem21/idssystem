@@ -276,25 +276,31 @@ export default function ExperimentDetails() {
 
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Header */}
+          {/* Header with Back Button */}
           <div className="mb-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-bold text-white">{experiment.name}</h2>
-                <p className="mt-1 text-sm text-gray-400">{experiment.description}</p>
-              </div>
-              <div className="flex space-x-3">
-                <span
-                  className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(
-                    experiment.status
-                  )}`}
-                >
-                  {experiment.status}
-                </span>
-              </div>
+            <div className="flex items-center space-x-4 mb-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <h2 className="text-2xl font-bold text-white">{experiment.name}</h2>
+              <span
+                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(
+                  experiment.status
+                )}`}
+              >
+                {experiment.status}
+              </span>
+            </div>
+            <div className="ml-10">
+              <p className="text-sm text-gray-400">{experiment.description}</p>
             </div>
 
-            <div className="mt-4 flex space-x-3">
+            <div className="mt-4 ml-10 flex space-x-3">
               {experiment.status === 'pending' && (
                 <button
                   onClick={handleRunExperiment}
@@ -305,16 +311,10 @@ export default function ExperimentDetails() {
                 </button>
               )}
               <button
-                onClick={() => navigate('/dashboard')}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium"
-              >
-                Back to Dashboard
-              </button>
-              <button
                 onClick={handleDelete}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium"
               >
-                Delete
+                Delete Experiment
               </button>
             </div>
           </div>
@@ -323,6 +323,15 @@ export default function ExperimentDetails() {
           <div className="bg-gray-800 shadow rounded-lg p-6 mb-6">
             <h3 className="text-lg font-medium text-white mb-4">Configuration</h3>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-sm font-medium text-gray-400">Algorithm</dt>
+                <dd className="mt-1 text-sm text-white">
+                  {experiment.algorithm === 'lccde' && 'LCCDE - Leader Class & Confidence Decision Ensemble'}
+                  {experiment.algorithm === 'mth' && 'MTH-IDS - Multi-Tiered Hybrid IDS'}
+                  {experiment.algorithm === 'tree-based' && 'Tree-Based IDS - Feature Importance & Stacking'}
+                  {!experiment.algorithm && 'LCCDE (default)'}
+                </dd>
+              </div>
               <div>
                 <dt className="text-sm font-medium text-gray-400">Dataset</dt>
                 <dd className="mt-1 text-sm text-white">{experiment.dataset_name}</dd>
@@ -341,8 +350,49 @@ export default function ExperimentDetails() {
                 <dt className="text-sm font-medium text-gray-400">SMOTE Enabled</dt>
                 <dd className="mt-1 text-sm text-white">{experiment.smote_enabled ? 'Yes' : 'No'}</dd>
               </div>
+              {(experiment.algorithm === 'mth' || experiment.algorithm === 'tree-based') && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-400">Feature Selection</dt>
+                  <dd className="mt-1 text-sm text-white">{experiment.feature_selection_enabled ? 'Enabled' : 'Disabled'}</dd>
+                </div>
+              )}
             </dl>
           </div>
+
+          {/* Visualizations */}
+          {experiment.visualizations && (
+            <div className="bg-gray-800 shadow rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-medium text-white mb-4">Visualizations</h3>
+              
+              {/* Model Performance Comparison */}
+              {experiment.visualizations.comparison_plot && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-300 mb-3">Model Performance Comparison</h4>
+                  <div className="bg-white rounded-lg p-4">
+                    <img 
+                      src={`data:image/png;base64,${experiment.visualizations.comparison_plot}`} 
+                      alt="Model Performance Comparison"
+                      className="w-full h-auto"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Feature Importance (for Tree-Based) */}
+              {experiment.visualizations.feature_importance && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-300 mb-3">Top 20 Most Important Features</h4>
+                  <div className="bg-white rounded-lg p-4">
+                    <img 
+                      src={`data:image/png;base64,${experiment.visualizations.feature_importance}`} 
+                      alt="Feature Importance"
+                      className="w-full h-auto"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Results */}
           {results.length > 0 && (
@@ -419,8 +469,22 @@ export default function ExperimentDetails() {
                       </div>
                     )}
 
-                    {/* Confusion Matrix */}
-                    {result.confusion_matrix && (
+                    {/* Confusion Matrix Plot (if available) */}
+                    {result.confusion_matrix_plot && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-400 mb-2">Confusion Matrix Heatmap</h5>
+                        <div className="bg-white rounded-lg p-4">
+                          <img 
+                            src={`data:image/png;base64,${result.confusion_matrix_plot}`} 
+                            alt={`Confusion Matrix - ${result.model_name}`}
+                            className="w-full h-auto"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Confusion Matrix Table (fallback if no plot) */}
+                    {result.confusion_matrix && !result.confusion_matrix_plot && (
                       <div className="mt-4">
                         <h5 className="text-sm font-medium text-gray-400 mb-2">Confusion Matrix</h5>
                         <ConfusionMatrix matrix={result.confusion_matrix} attackTypes={attackTypes} />

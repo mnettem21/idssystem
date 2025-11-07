@@ -11,12 +11,14 @@ export default function CreateExperiment() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    algorithm: 'lccde',
     dataset_name: 'CICIDS2017_sample_km.csv',
     train_size: 0.8,
     test_size: 0.2,
     random_state: 0,
     smote_enabled: true,
     smote_sampling_strategy: JSON.stringify({ '2': 1000, '4': 1000 }, null, 2),
+    feature_selection_enabled: true,
     lightgbm_params: '{}',
     xgboost_params: '{}',
     catboost_params: JSON.stringify({ 'verbose': 0, 'boosting_type': 'Plain' }, null, 2),
@@ -48,12 +50,14 @@ export default function CreateExperiment() {
         user_id: user.id,
         name: formData.name,
         description: formData.description,
+        algorithm: formData.algorithm,
         dataset_name: formData.dataset_name,
         train_size: parseFloat(formData.train_size),
         test_size: parseFloat(formData.test_size),
         random_state: parseInt(formData.random_state),
         smote_enabled: formData.smote_enabled,
         smote_sampling_strategy: JSON.parse(formData.smote_sampling_strategy),
+        feature_selection_enabled: formData.feature_selection_enabled,
         lightgbm_params: JSON.parse(formData.lightgbm_params || '{}'),
         xgboost_params: JSON.parse(formData.xgboost_params || '{}'),
         catboost_params: JSON.parse(formData.catboost_params),
@@ -80,7 +84,19 @@ export default function CreateExperiment() {
 
       <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <h2 className="text-2xl font-bold text-white mb-6">Create New Experiment</h2>
+          {/* Header with Back Button */}
+          <div className="flex items-center space-x-4 mb-6">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="text-gray-400 hover:text-white transition"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <h2 className="text-2xl font-bold text-white">Create New Experiment</h2>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
@@ -115,6 +131,28 @@ export default function CreateExperiment() {
                     onChange={handleChange}
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="algorithm" className="block text-sm font-medium text-gray-300">
+                    Algorithm *
+                  </label>
+                  <select
+                    name="algorithm"
+                    id="algorithm"
+                    value={formData.algorithm}
+                    onChange={handleChange}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="lccde">LCCDE - Leader Class & Confidence Decision Ensemble</option>
+                    <option value="mth">MTH-IDS - Multi-Tiered Hybrid IDS</option>
+                    <option value="tree-based">Tree-Based IDS - Feature Importance & Stacking</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formData.algorithm === 'lccde' && 'Uses LightGBM, XGBoost, CatBoost with leader model selection'}
+                    {formData.algorithm === 'mth' && 'Uses DT, RF, ET, XGBoost with information gain feature selection'}
+                    {formData.algorithm === 'tree-based' && 'Uses DT, RF, ET, XGBoost with average feature importance'}
+                  </p>
                 </div>
 
                 <div>
@@ -229,6 +267,31 @@ export default function CreateExperiment() {
                 )}
               </div>
             </div>
+
+            {/* Feature Selection Configuration */}
+            {(formData.algorithm === 'mth' || formData.algorithm === 'tree-based') && (
+              <div className="bg-gray-800 shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-white mb-4">Feature Selection</h3>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="feature_selection_enabled"
+                    id="feature_selection_enabled"
+                    checked={formData.feature_selection_enabled}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-gray-700"
+                  />
+                  <label htmlFor="feature_selection_enabled" className="ml-2 block text-sm text-gray-300">
+                    Enable Feature Selection
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  {formData.algorithm === 'mth' && 'Uses Information Gain to select top features (90% cumulative importance)'}
+                  {formData.algorithm === 'tree-based' && 'Uses average feature importance from all models (90% cumulative importance)'}
+                </p>
+              </div>
+            )}
 
             {/* Model Parameters */}
             <div className="bg-gray-800 shadow rounded-lg p-6">

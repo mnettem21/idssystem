@@ -140,17 +140,24 @@ def create_experiment(user_id, user):
 
         supabase = get_supabase_client()
 
+        # Get algorithm type
+        algorithm = data.get('algorithm', 'lccde')
+        if algorithm not in ['lccde', 'mth', 'tree-based', 'tree_based']:
+            return jsonify({'error': 'Invalid algorithm. Choose: lccde, mth, or tree-based'}), 400
+
         # Create experiment record
         experiment_data = {
             'user_id': user_id,
             'name': data.get('name'),
             'description': data.get('description', ''),
+            'algorithm': algorithm,
             'dataset_name': dataset_name,
             'train_size': data.get('train_size', 0.8),
             'test_size': data.get('test_size', 0.2),
             'random_state': data.get('random_state', 0),
             'smote_enabled': data.get('smote_enabled', True),
             'smote_sampling_strategy': data.get('smote_sampling_strategy', {"2": 1000, "4": 1000}),
+            'feature_selection_enabled': data.get('feature_selection_enabled', True),
             'lightgbm_params': data.get('lightgbm_params', {}),
             'xgboost_params': data.get('xgboost_params', {}),
             'catboost_params': data.get('catboost_params', {"verbose": 0, "boosting_type": "Plain"}),
@@ -198,11 +205,13 @@ def run_experiment_background(experiment_id, user_id):
 
         # Prepare configuration
         config = {
+            'algorithm': experiment.get('algorithm', 'lccde'),
             'train_size': float(experiment['train_size']),
             'test_size': float(experiment['test_size']),
             'random_state': experiment['random_state'],
             'smote_enabled': experiment['smote_enabled'],
             'smote_sampling_strategy': experiment['smote_sampling_strategy'],
+            'feature_selection_enabled': experiment.get('feature_selection_enabled', True),
             'lightgbm_params': experiment['lightgbm_params'] or {},
             'xgboost_params': experiment['xgboost_params'] or {},
             'catboost_params': experiment['catboost_params'] or {"verbose": 0, "boosting_type": "Plain"}
@@ -222,9 +231,13 @@ def run_experiment_background(experiment_id, user_id):
         print(f"ML TRAINING COMPLETE")
         print(f"{'='*60}\n")
 
+        # Handle results structure (may have visualizations)
+        model_results = results.get('results', results)
+        visualizations = results.get('visualizations', {})
+
         # Save results to database
         print(f"Saving results to database...")
-        for model_name, metrics in results.items():
+        for model_name, metrics in model_results.items():
             result_data = {
                 'experiment_id': experiment_id,
                 'model_name': model_name,
@@ -234,12 +247,20 @@ def run_experiment_background(experiment_id, user_id):
                 'f1_score': metrics['f1_score'],
                 'f1_scores_per_class': metrics['f1_scores_per_class'],
                 'confusion_matrix': metrics['confusion_matrix'],
+                'confusion_matrix_plot': metrics.get('confusion_matrix_plot'),
                 'training_time': metrics['training_time'],
                 'classification_report': metrics['classification_report']
             }
 
             supabase.table('experiment_results').insert(result_data).execute()
             print(f"  ✓ Saved {model_name} results (F1: {metrics['f1_score']:.4f})")
+
+        # Save visualizations to experiment record
+        if visualizations:
+            supabase.table('experiments').update({
+                'visualizations': visualizations
+            }).eq('id', experiment_id).execute()
+            print(f"  ✓ Saved visualizations")
 
         # Update experiment status to completed
         supabase.table('experiments').update({

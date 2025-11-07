@@ -11,3 +11,5 @@ xgboost
 imbalanced-learn
 river
 PyJWT
+matplotlib
+seaborn

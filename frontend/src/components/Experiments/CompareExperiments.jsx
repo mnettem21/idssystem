@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../Layout/Navbar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default function CompareExperiments() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [experiments, setExperiments] = useState([])
   const [loading, setLoading] = useState(true)
   const [attackTypes, setAttackTypes] = useState([])
@@ -142,7 +143,20 @@ export default function CompareExperiments() {
 
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <h2 className="text-2xl font-bold text-white mb-6">Compare Experiments</h2>
+          {/* Header with Back Button */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <h2 className="text-2xl font-bold text-white">Compare Experiments</h2>
+            </div>
+          </div>
 
           {experiments.length === 0 ? (
             <div className="text-center text-gray-400 py-8">

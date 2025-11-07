@@ -1,53 +1,53 @@
-import { useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const { signIn, signUp } = useAuth()
-  const navigate = useNavigate()
+  const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
       const { error } = isSignUp
         ? await signUp(email, password)
-        : await signIn(email, password)
+        : await signIn(email, password);
 
       if (error) {
-        setError(error.message)
+        setError(error.message);
       } else {
         if (!isSignUp) {
-          navigate('/dashboard')
+          navigate("/dashboard");
         } else {
-          setError(null)
-          alert('Check your email for the confirmation link!')
+          setError(null);
+          alert("Check your email for the confirmation link!");
         }
       }
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-            IDS ML Experiment System
+            IDS ML Environment Experiment System
           </h2>
           <p className="mt-2 text-center text-sm text-gray-400">
-            {isSignUp ? 'Create a new account' : 'Sign in to your account'}
+            {isSignUp ? "Create a new account" : "Sign in to your account"}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -98,7 +98,7 @@ export default function Login() {
               disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
             </button>
           </div>
 
@@ -106,18 +106,18 @@ export default function Login() {
             <button
               type="button"
               onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError(null)
+                setIsSignUp(!isSignUp);
+                setError(null);
               }}
               className="text-sm text-blue-400 hover:text-blue-300"
             >
               {isSignUp
-                ? 'Already have an account? Sign in'
+                ? "Already have an account? Sign in"
                 : "Don't have an account? Sign up"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
