@@ -18,12 +18,13 @@ export default function Login() {
     setError(null);
 
     try {
-      const { error } = isSignUp
+      const { data, error } = isSignUp
         ? await signUp(email, password)
         : await signIn(email, password);
 
       if (error) {
-        setError(error.message);
+        console.error('Auth error:', error);
+        setError(error.message || 'Authentication failed. Please check your credentials.');
       } else {
         if (!isSignUp) {
           navigate("/dashboard");
@@ -33,7 +34,14 @@ export default function Login() {
         }
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      if (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to connect')) {
+        setError('Cannot connect to Supabase. The project may be paused or the URL is incorrect. Please check: 1) Your Supabase project is active, 2) The URL in .env file is correct, 3) Your internet connection.');
+      } else if (err.message?.includes('Supabase')) {
+        setError(err.message);
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

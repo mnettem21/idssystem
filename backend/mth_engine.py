@@ -109,7 +109,7 @@ class MTHEngine:
         sampling_strategy = self.config.get('smote_sampling_strategy', {2: 1000, 4: 1000})
         sampling_strategy = {int(k): v for k, v in sampling_strategy.items()}
 
-        smote = SMOTE(n_jobs=-1, sampling_strategy=sampling_strategy)
+        smote = SMOTE(sampling_strategy=sampling_strategy)
         self.X_train, self.y_train = smote.fit_resample(self.X_train, self.y_train)
 
     def train_decision_tree(self):
@@ -178,6 +178,9 @@ class MTHEngine:
         start_time = time.time()
 
         params = self.config.get('xgboost_params', {'n_estimators': 10})
+        # Ensure params is a dict
+        if not isinstance(params, dict):
+            params = {'n_estimators': 10}
         model = xgb.XGBClassifier(**params)
         model.fit(self.X_train, self.y_train)
 
@@ -214,6 +217,9 @@ class MTHEngine:
 
         # Train stacking model
         params = self.config.get('stacking_params', {})
+        # Ensure params is a dict
+        if not isinstance(params, dict):
+            params = {}
         model = xgb.XGBClassifier(**params)
         model.fit(x_train, self.y_train)
 

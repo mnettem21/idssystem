@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard/Dashboard'
 import CreateExperiment from './components/Experiments/CreateExperiment'
 import ExperimentDetails from './components/Experiments/ExperimentDetails'
 import CompareExperiments from './components/Experiments/CompareExperiments'
+import ExperimentHistory from './components/Experiments/ExperimentHistory'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -59,6 +60,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CompareExperiments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/experiments/history"
+            element={
+              <ProtectedRoute>
+                <ExperimentHistory />
               </ProtectedRoute>
             }
           />

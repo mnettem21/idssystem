@@ -71,7 +71,7 @@ class LCCDEEngine:
         # Convert string keys to int if needed
         sampling_strategy = {int(k): v for k, v in sampling_strategy.items()}
 
-        smote = SMOTE(n_jobs=-1, sampling_strategy=sampling_strategy)
+        smote = SMOTE(sampling_strategy=sampling_strategy)
         self.X_train, self.y_train = smote.fit_resample(self.X_train, self.y_train)
 
     def train_lightgbm(self):
@@ -80,6 +80,9 @@ class LCCDEEngine:
         start_time = time.time()
 
         params = self.config.get('lightgbm_params', {})
+        # Ensure params is a dict
+        if not isinstance(params, dict):
+            params = {}
         model = lgb.LGBMClassifier(**params)
         model.fit(self.X_train, self.y_train)
 
@@ -101,6 +104,9 @@ class LCCDEEngine:
         start_time = time.time()
 
         params = self.config.get('xgboost_params', {})
+        # Ensure params is a dict
+        if not isinstance(params, dict):
+            params = {}
         model = xgb.XGBClassifier(**params)
 
         X_train_x = self.X_train.values
@@ -125,6 +131,16 @@ class LCCDEEngine:
         start_time = time.time()
 
         params = self.config.get('catboost_params', {'verbose': 0, 'boosting_type': 'Plain'})
+        # Ensure params is a dict and create a copy to avoid modifying original
+        if not isinstance(params, dict):
+            params = {}
+        else:
+            params = params.copy()
+        # Set required CatBoost parameters
+        if 'verbose' not in params:
+            params['verbose'] = 0
+        if 'boosting_type' not in params:
+            params['boosting_type'] = 'Plain'
         # Disable file writing to prevent catboost_info directory creation
         params['allow_writing_files'] = False
         model = cbt.CatBoostClassifier(**params)

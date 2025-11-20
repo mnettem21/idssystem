@@ -25,7 +25,7 @@ class Config:
     }
 
     # CORS settings
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(',')
 
     # Experiment settings
-    MAX_CONCURRENT_EXPERIMENTS = int(os.getenv('MAX_CONCURRENT_EXPERIMENTS', '1'))
+    MAX_CONCURRENT_EXPERIMENTS = int(os.getenv('MAX_CONCURRENT_EXPERIMENTS', '3'))

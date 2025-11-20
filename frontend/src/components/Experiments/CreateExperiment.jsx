@@ -19,8 +19,8 @@ export default function CreateExperiment() {
     smote_enabled: true,
     smote_sampling_strategy: JSON.stringify({ '2': 1000, '4': 1000 }, null, 2),
     feature_selection_enabled: true,
-    lightgbm_params: '{}',
-    xgboost_params: '{}',
+    lightgbm_params: JSON.stringify({}, null, 2),
+    xgboost_params: JSON.stringify({}, null, 2),
     catboost_params: JSON.stringify({ 'verbose': 0, 'boosting_type': 'Plain' }, null, 2),
   })
 
@@ -45,7 +45,51 @@ export default function CreateExperiment() {
         throw new Error('You must be logged in to create an experiment')
       }
 
-      // Parse JSON fields
+      // Parse JSON fields with error handling
+      let lightgbm_params = {}
+      let xgboost_params = {}
+      let catboost_params = { 'verbose': 0, 'boosting_type': 'Plain' }
+
+      try {
+        if (formData.lightgbm_params && formData.lightgbm_params.trim() !== '') {
+          const parsed = JSON.parse(formData.lightgbm_params)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            lightgbm_params = parsed
+          }
+        }
+      } catch (e) {
+        throw new Error(`Invalid LightGBM parameters JSON: ${e.message}`)
+      }
+
+      try {
+        if (formData.xgboost_params && formData.xgboost_params.trim() !== '') {
+          const parsed = JSON.parse(formData.xgboost_params)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            xgboost_params = parsed
+          }
+        }
+      } catch (e) {
+        throw new Error(`Invalid XGBoost parameters JSON: ${e.message}`)
+      }
+
+      try {
+        if (formData.catboost_params && formData.catboost_params.trim() !== '') {
+          const parsed = JSON.parse(formData.catboost_params)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            catboost_params = parsed
+            // Ensure required CatBoost parameters are set
+            if (!('verbose' in catboost_params)) {
+              catboost_params['verbose'] = 0
+            }
+            if (!('boosting_type' in catboost_params)) {
+              catboost_params['boosting_type'] = 'Plain'
+            }
+          }
+        }
+      } catch (e) {
+        throw new Error(`Invalid CatBoost parameters JSON: ${e.message}`)
+      }
+
       const experimentData = {
         user_id: user.id,
         name: formData.name,
@@ -58,17 +102,51 @@ export default function CreateExperiment() {
         smote_enabled: formData.smote_enabled,
         smote_sampling_strategy: JSON.parse(formData.smote_sampling_strategy),
         feature_selection_enabled: formData.feature_selection_enabled,
-        lightgbm_params: JSON.parse(formData.lightgbm_params || '{}'),
-        xgboost_params: JSON.parse(formData.xgboost_params || '{}'),
-        catboost_params: JSON.parse(formData.catboost_params),
+        lightgbm_params: lightgbm_params,
+        xgboost_params: xgboost_params,
+        catboost_params: catboost_params,
       }
 
+      // Ensure we have a valid session before making the request
+      let { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError)
+        throw new Error('Session error: ' + sessionError.message)
+      }
+      
+      if (!currentSession) {
+        // Try to refresh the session
+        console.log('No session found, attempting to refresh...')
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError || !refreshedSession) {
+          throw new Error('Your session has expired. Please log in again.')
+        }
+        currentSession = refreshedSession
+      }
+
+      console.log('Creating experiment with user:', user.id)
+      console.log('Session exists:', !!currentSession)
+      console.log('Session token length:', currentSession?.access_token?.length || 0)
+
+      // Make the request with explicit error handling
       const { data, error } = await supabase
         .from('experiments')
         .insert([experimentData])
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase insert error:', error)
+        console.error('Error code:', error.code)
+        console.error('Error message:', error.message)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        
+        // Provide more helpful error messages
+        if (error.code === 'PGRST301' || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          throw new Error('Authentication failed. Please refresh the page and log in again.')
+        }
+        throw error
+      }
 
       navigate(`/experiments/${data[0].id}`)
     } catch (err) {
@@ -134,25 +212,67 @@ export default function CreateExperiment() {
                 </div>
 
                 <div>
-                  <label htmlFor="algorithm" className="block text-sm font-medium text-gray-300">
-                    Algorithm *
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Model Selection *
                   </label>
-                  <select
-                    name="algorithm"
-                    id="algorithm"
-                    value={formData.algorithm}
-                    onChange={handleChange}
-                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="lccde">LCCDE - Leader Class & Confidence Decision Ensemble</option>
-                    <option value="mth">MTH-IDS - Multi-Tiered Hybrid IDS</option>
-                    <option value="tree-based">Tree-Based IDS - Feature Importance & Stacking</option>
-                  </select>
-                  <p className="mt-1 text-xs text-gray-400">
-                    {formData.algorithm === 'lccde' && 'Uses LightGBM, XGBoost, CatBoost with leader model selection'}
-                    {formData.algorithm === 'mth' && 'Uses DT, RF, ET, XGBoost with information gain feature selection'}
-                    {formData.algorithm === 'tree-based' && 'Uses DT, RF, ET, XGBoost with average feature importance'}
-                  </p>
+                  <div className="space-y-3">
+                    <label className="flex items-start p-3 bg-gray-700 border-2 rounded-lg cursor-pointer hover:bg-gray-600 transition"
+                      style={{ borderColor: formData.algorithm === 'lccde' ? '#3b82f6' : '#4b5563' }}>
+                      <input
+                        type="radio"
+                        name="algorithm"
+                        value="lccde"
+                        checked={formData.algorithm === 'lccde'}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex items-center">
+                          <span className="text-white font-medium">LCCDE</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Leader Class & Confidence Decision Ensemble</p>
+                        <p className="text-xs text-gray-500 mt-1">Uses LightGBM, XGBoost, CatBoost with leader model selection</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start p-3 bg-gray-700 border-2 rounded-lg cursor-pointer hover:bg-gray-600 transition"
+                      style={{ borderColor: formData.algorithm === 'mth' ? '#3b82f6' : '#4b5563' }}>
+                      <input
+                        type="radio"
+                        name="algorithm"
+                        value="mth"
+                        checked={formData.algorithm === 'mth'}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex items-center">
+                          <span className="text-white font-medium">MTH-IDS</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Multi-Tiered Hybrid IDS</p>
+                        <p className="text-xs text-gray-500 mt-1">Uses DT, RF, ET, XGBoost with information gain feature selection</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start p-3 bg-gray-700 border-2 rounded-lg cursor-pointer hover:bg-gray-600 transition"
+                      style={{ borderColor: formData.algorithm === 'tree-based' ? '#3b82f6' : '#4b5563' }}>
+                      <input
+                        type="radio"
+                        name="algorithm"
+                        value="tree-based"
+                        checked={formData.algorithm === 'tree-based'}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex items-center">
+                          <span className="text-white font-medium">Tree-Based</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Feature Importance & Stacking</p>
+                        <p className="text-xs text-gray-500 mt-1">Uses DT, RF, ET, XGBoost with average feature importance</p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -305,11 +425,15 @@ export default function CreateExperiment() {
                   <textarea
                     name="lightgbm_params"
                     id="lightgbm_params"
-                    rows={3}
+                    rows={4}
                     value={formData.lightgbm_params}
                     onChange={handleChange}
+                    placeholder='{}'
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Leave empty {} for defaults. Example: {`{"n_estimators": 100, "learning_rate": 0.1, "max_depth": 7}`}
+                  </p>
                 </div>
 
                 <div>
@@ -319,11 +443,15 @@ export default function CreateExperiment() {
                   <textarea
                     name="xgboost_params"
                     id="xgboost_params"
-                    rows={3}
+                    rows={4}
                     value={formData.xgboost_params}
                     onChange={handleChange}
+                    placeholder='{}'
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Leave empty {} for defaults. Example: {`{"n_estimators": 100, "learning_rate": 0.1, "max_depth": 6}`}
+                  </p>
                 </div>
 
                 <div>
@@ -333,11 +461,14 @@ export default function CreateExperiment() {
                   <textarea
                     name="catboost_params"
                     id="catboost_params"
-                    rows={3}
+                    rows={4}
                     value={formData.catboost_params}
                     onChange={handleChange}
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Default: {`{"verbose": 0, "boosting_type": "Plain"}`}. Example: {`{"iterations": 100, "learning_rate": 0.1, "depth": 6}`}
+                  </p>
                 </div>
               </div>
             </div>

@@ -42,17 +42,42 @@ def require_auth(f):
             print("DEBUG: No auth header, returning 401")
             return jsonify({'error': 'No authorization token provided'}), 401
 
-        token = auth_header.split(' ')[1]
-        user = verify_token(token)
+        try:
+            token = auth_header.split(' ')[1]
+            if not token:
+                return jsonify({'error': 'Empty token provided'}), 401
+            
+            print(f"DEBUG: Verifying token (length: {len(token)}, first 30 chars: {token[:30]}...)")
+            
+            # Try to decode token to see its structure
+            try:
+                import jwt
+                decoded_preview = jwt.decode(token, options={"verify_signature": False})
+                print(f"DEBUG: Token preview - keys: {list(decoded_preview.keys())}, role: {decoded_preview.get('role')}, sub: {decoded_preview.get('sub')}")
+            except Exception as decode_err:
+                print(f"DEBUG: Could not decode token preview: {decode_err}")
+            
+            user = verify_token(token)
 
-        if not user:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            if not user:
+                print("DEBUG: Token verification failed - verify_token returned None")
+                print("DEBUG: This might be because:")
+                print("  - Token is an API key (anon/service_role) instead of user token")
+                print("  - Token doesn't contain 'sub' field with user ID")
+                print("  - Token structure is invalid")
+                return jsonify({'error': 'Invalid or expired token. Please log in again.'}), 401
 
-        # Pass user info to the route handler
-        kwargs['user_id'] = user['id']
-        kwargs['user'] = user
+            print(f"DEBUG: Token verified successfully for user: {user.get('id')}")
+            # Pass user info to the route handler
+            kwargs['user_id'] = user['id']
+            kwargs['user'] = user
 
-        return f(*args, **kwargs)
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f"DEBUG: Exception in require_auth: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Authentication error: {str(e)}'}), 401
 
     return decorated_function
 
@@ -182,12 +207,24 @@ def run_experiment_background(experiment_id, user_id):
         print(f"EXPERIMENT {experiment_id} STARTING")
         print(f"{'='*60}\n")
 
-        supabase = get_supabase_client()
+        try:
+            supabase = get_supabase_client()
+            print("✓ Supabase client obtained in background thread")
+        except Exception as supabase_error:
+            print(f"✗ Error getting Supabase client in background: {supabase_error}")
+            raise
 
         # Get experiment details
-        exp_response = supabase.table('experiments').select('*').eq(
-            'id', experiment_id
-        ).execute()
+        try:
+            exp_response = supabase.table('experiments').select('*').eq(
+                'id', experiment_id
+            ).execute()
+        except Exception as db_error:
+            print(f"✗ Database query error: {db_error}")
+            error_msg = str(db_error)
+            if 'API key' in error_msg or 'apikey' in error_msg.lower():
+                print("✗ This appears to be an API key configuration issue")
+            raise
 
         if not exp_response.data:
             print(f"ERROR: Experiment {experiment_id} not found")
@@ -212,9 +249,9 @@ def run_experiment_background(experiment_id, user_id):
             'smote_enabled': experiment['smote_enabled'],
             'smote_sampling_strategy': experiment['smote_sampling_strategy'],
             'feature_selection_enabled': experiment.get('feature_selection_enabled', True),
-            'lightgbm_params': experiment['lightgbm_params'] or {},
-            'xgboost_params': experiment['xgboost_params'] or {},
-            'catboost_params': experiment['catboost_params'] or {"verbose": 0, "boosting_type": "Plain"}
+            'lightgbm_params': experiment.get('lightgbm_params') or {},
+            'xgboost_params': experiment.get('xgboost_params') or {},
+            'catboost_params': experiment.get('catboost_params') or {"verbose": 0, "boosting_type": "Plain"}
         }
 
         # Get dataset path
@@ -305,14 +342,34 @@ def run_experiment(user_id, user, experiment_id):
     """Run an experiment"""
     print(f"DEBUG: run_experiment called with experiment_id={experiment_id}, user_id={user_id}")
     try:
-        supabase = get_supabase_client()
+        # Initialize Supabase client with error handling
+        try:
+            supabase = get_supabase_client()
+            print("DEBUG: Supabase client obtained successfully")
+        except Exception as supabase_error:
+            print(f"DEBUG: Error getting Supabase client: {supabase_error}")
+            return jsonify({
+                'error': f'Supabase configuration error: {str(supabase_error)}'
+            }), 500
 
         # Verify experiment exists and belongs to user
-        exp_response = supabase.table('experiments').select('*').eq(
-            'id', experiment_id
-        ).eq('user_id', user_id).execute()
+        try:
+            exp_response = supabase.table('experiments').select('*').eq(
+                'id', experiment_id
+            ).eq('user_id', user_id).execute()
 
-        print(f"DEBUG: exp_response.data = {exp_response.data}")
+            print(f"DEBUG: exp_response.data = {exp_response.data}")
+        except Exception as db_error:
+            print(f"DEBUG: Database query error: {db_error}")
+            error_msg = str(db_error)
+            # Check if it's the "No API key" error
+            if 'API key' in error_msg or 'apikey' in error_msg.lower():
+                return jsonify({
+                    'error': 'Supabase API key configuration error. Please check backend environment variables.'
+                }), 500
+            return jsonify({
+                'error': f'Database error: {error_msg}'
+            }), 500
 
         if not exp_response.data:
             print(f"DEBUG: Experiment not found in database")
@@ -348,7 +405,12 @@ def run_experiment(user_id, user, experiment_id):
         print(f"DEBUG: Error in run_experiment: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        error_msg = str(e)
+        if 'API key' in error_msg or 'apikey' in error_msg.lower():
+            return jsonify({
+                'error': 'Supabase API key error. Please check backend configuration.'
+            }), 500
+        return jsonify({'error': error_msg}), 500
 
 
 @experiments_bp.route('/<experiment_id>', methods=['DELETE'])

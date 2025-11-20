@@ -79,7 +79,7 @@ class TreeBasedEngine:
         sampling_strategy = self.config.get('smote_sampling_strategy', {4: 1500})
         sampling_strategy = {int(k): v for k, v in sampling_strategy.items()}
 
-        smote = SMOTE(n_jobs=-1, sampling_strategy=sampling_strategy)
+        smote = SMOTE(sampling_strategy=sampling_strategy)
         self.X_train, self.y_train = smote.fit_resample(self.X_train, self.y_train)
 
     def train_base_learners_with_feature_importance(self):
