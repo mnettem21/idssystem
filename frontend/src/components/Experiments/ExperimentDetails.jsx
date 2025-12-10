@@ -257,6 +257,77 @@ export default function ExperimentDetails() {
     }))
   }
 
+  // Calculate dynamic Y-axis range for metrics charts to show variation even when values are clustered
+  const getMetricRange = (data, keys) => {
+    const allValues = []
+    data.forEach(item => {
+      keys.forEach(key => {
+        if (item[key] !== undefined) {
+          allValues.push(item[key])
+        }
+      })
+    })
+
+    if (allValues.length === 0) return [0, 100]
+
+    const min = Math.min(...allValues)
+    const max = Math.max(...allValues)
+    const range = max - min
+
+    // Always zoom in to show differences - use padding based on range
+    const padding = Math.max(1, range * 0.3) // At least 1% padding, or 30% of range
+    const yMin = Math.max(0, Math.floor(min - padding))
+    const yMax = Math.min(100, Math.ceil(max + padding))
+
+    return [yMin, yMax]
+  }
+
+  // Calculate dynamic Y-axis range for comparison charts
+  const getComparisonRange = () => {
+    const comparisonData = prepareComparisonData()
+    if (!comparisonData || comparisonData.length === 0) return [0, 100]
+
+    const allValues = []
+    comparisonData.forEach(item => {
+      Object.keys(item).forEach(key => {
+        if (key !== 'model' && typeof item[key] === 'number') {
+          allValues.push(item[key])
+        }
+      })
+    })
+
+    if (allValues.length === 0) return [0, 100]
+
+    const min = Math.min(...allValues)
+    const max = Math.max(...allValues)
+    const range = max - min
+
+    const padding = Math.max(1, range * 0.3)
+    const yMin = Math.max(0, Math.floor(min - padding))
+    const yMax = Math.min(100, Math.ceil(max + padding))
+
+    return [yMin, yMax]
+  }
+
+  // Calculate dynamic Y-axis range for F1 scores per class
+  const getF1PerClassRange = () => {
+    if (!results[0]?.f1_scores_per_class) return [0, 100]
+
+    const allValues = results[0].f1_scores_per_class.map(score => score * 100)
+
+    if (allValues.length === 0) return [0, 100]
+
+    const min = Math.min(...allValues)
+    const max = Math.max(...allValues)
+    const range = max - min
+
+    const padding = Math.max(1, range * 0.3)
+    const yMin = Math.max(0, Math.floor(min - padding))
+    const yMax = Math.min(100, Math.ceil(max + padding))
+
+    return [yMin, yMax]
+  }
+
   const handleRunExperiment = async () => {
     setRunning(true)
     try {
@@ -662,7 +733,7 @@ export default function ExperimentDetails() {
                     <BarChart data={prepareComparisonData()}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis dataKey="model" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" tickFormatter={(value) => value.toFixed(1) + '%'} />
+                      <YAxis stroke="#9CA3AF" domain={getComparisonRange()} tickFormatter={(value) => value.toFixed(1) + '%'} />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: '#1F2937',
@@ -732,7 +803,7 @@ export default function ExperimentDetails() {
                 <BarChart data={prepareMetricsChartData()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="model" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" tickFormatter={(value) => value.toFixed(0) + '%'} />
+                  <YAxis stroke="#9CA3AF" domain={getMetricRange(prepareMetricsChartData(), ['Accuracy', 'Precision', 'Recall', 'F1 Score'])} tickFormatter={(value) => value.toFixed(1) + '%'} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1F2937',
@@ -807,7 +878,7 @@ export default function ExperimentDetails() {
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis dataKey="attackType" stroke="#9CA3AF" angle={-45} textAnchor="end" height={100} />
-                      <YAxis stroke="#9CA3AF" tickFormatter={(value) => value.toFixed(0) + '%'} />
+                      <YAxis stroke="#9CA3AF" domain={getF1PerClassRange()} tickFormatter={(value) => value.toFixed(1) + '%'} />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: '#1F2937',

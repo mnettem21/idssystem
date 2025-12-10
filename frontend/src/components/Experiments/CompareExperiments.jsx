@@ -101,13 +101,12 @@ export default function CompareExperiments() {
     const max = Math.max(...allValues)
     const range = max - min
 
-    // If values are very close (within 5%), zoom in
-    if (range < 5) {
-      const padding = Math.max(0.5, range * 0.2)
-      return [Math.max(0, min - padding), Math.min(100, max + padding)]
-    }
+    // Always zoom in to show differences - use padding based on range
+    const padding = Math.max(1, range * 0.3) // At least 1% padding, or 30% of range
+    const yMin = Math.max(0, Math.floor(min - padding))
+    const yMax = Math.min(100, Math.ceil(max + padding))
 
-    return [0, 100]
+    return [yMin, yMax]
   }
 
 
