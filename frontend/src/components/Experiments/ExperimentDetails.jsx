@@ -925,13 +925,27 @@ export default function ExperimentDetails() {
                       </div>
                     )}
 
+                    {/* ROC Curve Plot (if available) */}
+                    {result.roc_curve_plot && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-gray-400 mb-2">ROC Curves (per class)</h5>
+                        <div className="bg-white rounded-lg p-4">
+                          <img
+                            src={`data:image/png;base64,${result.roc_curve_plot}`}
+                            alt={`ROC Curves - ${result.model_name}`}
+                            className="w-full h-auto"
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Confusion Matrix Plot (if available) */}
                     {result.confusion_matrix_plot && (
                       <div className="mt-4">
                         <h5 className="text-sm font-medium text-gray-400 mb-2">Confusion Matrix Heatmap</h5>
                         <div className="bg-white rounded-lg p-4">
-                          <img 
-                            src={`data:image/png;base64,${result.confusion_matrix_plot}`} 
+                          <img
+                            src={`data:image/png;base64,${result.confusion_matrix_plot}`}
                             alt={`Confusion Matrix - ${result.model_name}`}
                             className="w-full h-auto"
                           />

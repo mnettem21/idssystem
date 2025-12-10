@@ -14,8 +14,9 @@ import base64
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report, confusion_matrix, accuracy_score,
-    precision_score, recall_score, f1_score
+    precision_score, recall_score, f1_score, roc_curve, auc
 )
+from sklearn.preprocessing import label_binarize
 import lightgbm as lgb
 import catboost as cbt
 import xgboost as xgb
@@ -87,12 +88,17 @@ class LCCDEEngine:
         model.fit(self.X_train, self.y_train)
 
         y_pred = model.predict(self.X_test)
+        y_proba = model.predict_proba(self.X_test)
         training_time = time.time() - start_time
 
         self.models['lightgbm'] = model
         self.results['lightgbm'] = self._calculate_metrics(
             self.y_test, y_pred, training_time, 'LightGBM'
         )
+
+        # Generate ROC curve
+        roc_plot = self._generate_roc_curve_plot(self.y_test.values, y_proba, 'LightGBM')
+        self.results['lightgbm']['roc_curve_plot'] = roc_plot
 
         print(f"✓ LightGBM trained in {training_time:.2f}s (F1: {self.results['lightgbm']['f1_score']:.4f})")
 
@@ -114,12 +120,17 @@ class LCCDEEngine:
 
         model.fit(X_train_x, self.y_train)
         y_pred = model.predict(X_test_x)
+        y_proba = model.predict_proba(X_test_x)
         training_time = time.time() - start_time
 
         self.models['xgboost'] = model
         self.results['xgboost'] = self._calculate_metrics(
             self.y_test, y_pred, training_time, 'XGBoost'
         )
+
+        # Generate ROC curve
+        roc_plot = self._generate_roc_curve_plot(self.y_test.values, y_proba, 'XGBoost')
+        self.results['xgboost']['roc_curve_plot'] = roc_plot
 
         print(f"✓ XGBoost trained in {training_time:.2f}s (F1: {self.results['xgboost']['f1_score']:.4f})")
 
@@ -147,12 +158,17 @@ class LCCDEEngine:
 
         model.fit(self.X_train, self.y_train)
         y_pred = model.predict(self.X_test)
+        y_proba = model.predict_proba(self.X_test)
         training_time = time.time() - start_time
 
         self.models['catboost'] = model
         self.results['catboost'] = self._calculate_metrics(
             self.y_test, y_pred, training_time, 'CatBoost'
         )
+
+        # Generate ROC curve
+        roc_plot = self._generate_roc_curve_plot(self.y_test.values, y_proba, 'CatBoost')
+        self.results['catboost']['roc_curve_plot'] = roc_plot
 
         print(f"✓ CatBoost trained in {training_time:.2f}s (F1: {self.results['catboost']['f1_score']:.4f})")
 
@@ -265,14 +281,69 @@ class LCCDEEngine:
         ax.set_xlabel('Predicted')
         ax.set_ylabel('Actual')
         ax.set_title(f'Confusion Matrix - {model_name}')
-        
+
         # Convert plot to base64
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
         buffer.seek(0)
         image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
         plt.close(fig)
-        
+
+        return image_base64
+
+    def _generate_roc_curve_plot(self, y_true, y_proba, model_name):
+        """Generate ROC curve plot as base64 image"""
+        # Get unique classes
+        classes = np.unique(y_true)
+        n_classes = len(classes)
+
+        # Binarize the labels for multi-class ROC
+        y_true_bin = label_binarize(y_true, classes=classes)
+
+        # Handle binary classification case
+        if n_classes == 2:
+            y_true_bin = np.hstack([1 - y_true_bin, y_true_bin])
+
+        # Ensure y_proba has correct shape
+        if len(y_proba.shape) == 1:
+            y_proba = np.column_stack([1 - y_proba, y_proba])
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        # Colors for different classes
+        colors = plt.cm.Set1(np.linspace(0, 1, n_classes))
+
+        # Compute ROC curve and AUC for each class
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+
+        for i in range(n_classes):
+            if i < y_proba.shape[1] and i < y_true_bin.shape[1]:
+                fpr[i], tpr[i], _ = roc_curve(y_true_bin[:, i], y_proba[:, i])
+                roc_auc[i] = auc(fpr[i], tpr[i])
+                ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
+                       label=f'Class {classes[i]} (AUC = {roc_auc[i]:.4f})')
+
+        # Plot diagonal line
+        ax.plot([0, 1], [0, 1], 'k--', lw=2, label='Random (AUC = 0.5)')
+
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+        ax.set_title(f'ROC Curves - {model_name}')
+        ax.legend(loc='lower right', fontsize=8)
+        ax.grid(alpha=0.3)
+
+        # Convert plot to base64
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+        plt.close(fig)
+
         return image_base64
 
     def _calculate_metrics(self, y_true, y_pred, training_time, model_name):

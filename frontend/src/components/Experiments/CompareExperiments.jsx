@@ -110,6 +110,7 @@ export default function CompareExperiments() {
     return [0, 100]
   }
 
+
   const getBestResult = (metric) => {
     let best = { value: 0, expName: '', modelName: '' }
     experiments.forEach(exp => {
@@ -122,6 +123,7 @@ export default function CompareExperiments() {
     })
     return best
   }
+
 
   if (loading) {
     return (
@@ -202,7 +204,8 @@ export default function CompareExperiments() {
                     <YAxis
                       stroke="#9CA3AF"
                       domain={metricRange}
-                      tickFormatter={(value) => value.toFixed(2) + '%'}
+                      tickFormatter={(value) => Number(value).toFixed(2) + '%'}
+                      width={70}
                     />
                     <Tooltip
                       contentStyle={{
