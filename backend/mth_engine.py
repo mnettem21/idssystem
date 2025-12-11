@@ -333,6 +333,9 @@ class MTHEngine:
         recall = recall_score(y_true, y_pred, average='weighted', zero_division=0)
         f1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
         f1_per_class = f1_score(y_true, y_pred, average=None, zero_division=0)
+
+        # Debug: Print actual metric values
+        print(f"  {model_name} metrics: Acc={accuracy:.6f}, Prec={precision:.6f}, Rec={recall:.6f}, F1={f1:.6f}")
         cm = confusion_matrix(y_true, y_pred)
         report = classification_report(y_true, y_pred, zero_division=0)
 
@@ -377,14 +380,22 @@ class MTHEngine:
         ax.bar(x - 0.5*width, precisions, width, label='Precision')
         ax.bar(x + 0.5*width, recalls, width, label='Recall')
         ax.bar(x + 1.5*width, f1_scores, width, label='F1-Score')
-        
+
         ax.set_xlabel('Models')
         ax.set_ylabel('Score')
         ax.set_title('Model Performance Comparison - MTH-IDS')
         ax.set_xticks(x)
         ax.set_xticklabels(models, rotation=45, ha='right')
         ax.legend()
-        ax.set_ylim([0, 1])
+
+        # Dynamic Y-axis: zoom in to show differences
+        all_scores = accuracies + precisions + recalls + f1_scores
+        min_score = min(all_scores)
+        max_score = max(all_scores)
+        padding = max(0.01, (max_score - min_score) * 0.3)  # At least 1% padding
+        y_min = max(0, min_score - padding)
+        y_max = min(1, max_score + padding)
+        ax.set_ylim([y_min, y_max])
         ax.grid(axis='y', alpha=0.3)
         
         buffer = io.BytesIO()

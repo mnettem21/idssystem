@@ -3,6 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../Layout/Navbar'
 
+// Dataset mapping based on original research notebooks
+const ALGORITHM_DATASET_MAP = {
+  'lccde': 'CICIDS2017_sample_km.csv',      // LCCDE uses k-means sampled dataset
+  'mth': 'CICIDS2017_sample_km.csv',        // MTH-IDS uses k-means sampled dataset
+  'tree-based': 'CICIDS2017_sample.csv',    // Tree-Based uses random sampled dataset
+}
+
+// SMOTE strategy mapping based on original research notebooks
+const ALGORITHM_SMOTE_MAP = {
+  'lccde': { '2': 1000, '4': 1000 },        // LCCDE: oversample classes 2 and 4
+  'mth': { '2': 1000, '4': 1000 },          // MTH-IDS: oversample classes 2 and 4
+  'tree-based': { '4': 1500 },              // Tree-Based: only oversample class 4
+}
+
 export default function CreateExperiment() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -12,7 +26,7 @@ export default function CreateExperiment() {
     name: '',
     description: '',
     algorithm: 'lccde',
-    dataset_name: 'CICIDS2017_sample_km.csv',
+    dataset_name: ALGORITHM_DATASET_MAP['lccde'],
     train_size: 0.8,
     test_size: 0.2,
     random_state: 0,
@@ -26,10 +40,21 @@ export default function CreateExperiment() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+
+    // If algorithm changes, automatically update the dataset and SMOTE strategy
+    if (name === 'algorithm') {
+      setFormData((prev) => ({
+        ...prev,
+        algorithm: value,
+        dataset_name: ALGORITHM_DATASET_MAP[value],
+        smote_sampling_strategy: JSON.stringify(ALGORITHM_SMOTE_MAP[value], null, 2),
+      }))
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      }))
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -276,19 +301,24 @@ export default function CreateExperiment() {
                 </div>
 
                 <div>
-                  <label htmlFor="dataset_name" className="block text-sm font-medium text-gray-300">
-                    Dataset
+                  <label className="block text-sm font-medium text-gray-300">
+                    Dataset (Auto-selected)
                   </label>
-                  <select
-                    name="dataset_name"
-                    id="dataset_name"
-                    value={formData.dataset_name}
-                    onChange={handleChange}
-                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="CICIDS2017_sample_km.csv">CICIDS2017 Sample (k-means)</option>
-                    <option value="CICIDS2017_sample.csv">CICIDS2017 Sample</option>
-                  </select>
+                  <div className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white">
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {formData.dataset_name === 'CICIDS2017_sample_km.csv'
+                          ? 'CICIDS2017 Sample (k-means)'
+                          : 'CICIDS2017 Sample (random)'}
+                      </span>
+                      <span className="text-xs text-gray-400 bg-gray-600 px-2 py-1 rounded">
+                        Auto
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Dataset is automatically selected based on the algorithm's original research paper.
+                  </p>
                 </div>
               </div>
             </div>
@@ -381,7 +411,7 @@ export default function CreateExperiment() {
                       className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
                     <p className="mt-1 text-xs text-gray-400">
-                      Format: {`{"2": 1000, "4": 1000}`} (class label: number of samples)
+                      Format: class label → number of samples. Auto-configured for {formData.algorithm.toUpperCase()}.
                     </p>
                   </div>
                 )}

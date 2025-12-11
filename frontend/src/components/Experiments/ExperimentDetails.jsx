@@ -245,42 +245,6 @@ export default function ExperimentDetails() {
     return comparisonData
   }
 
-  const prepareMetricsChartData = () => {
-    if (!results.length) return []
-
-    return results.map(result => ({
-      model: result.model_name,
-      Accuracy: result.accuracy * 100,
-      Precision: result.precision * 100,
-      Recall: result.recall * 100,
-      'F1 Score': result.f1_score * 100,
-    }))
-  }
-
-  // Calculate dynamic Y-axis range for metrics charts to show variation even when values are clustered
-  const getMetricRange = (data, keys) => {
-    const allValues = []
-    data.forEach(item => {
-      keys.forEach(key => {
-        if (item[key] !== undefined) {
-          allValues.push(item[key])
-        }
-      })
-    })
-
-    if (allValues.length === 0) return [0, 100]
-
-    const min = Math.min(...allValues)
-    const max = Math.max(...allValues)
-    const range = max - min
-
-    // Always zoom in to show differences - use padding based on range
-    const padding = Math.max(1, range * 0.3) // At least 1% padding, or 30% of range
-    const yMin = Math.max(0, Math.floor(min - padding))
-    const yMax = Math.min(100, Math.ceil(max + padding))
-
-    return [yMin, yMax]
-  }
 
   // Calculate dynamic Y-axis range for comparison charts
   const getComparisonRange = () => {
@@ -792,33 +756,6 @@ export default function ExperimentDetails() {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Metrics Chart */}
-          {results.length > 0 && (
-            <div className="bg-gray-800 shadow rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-medium text-white mb-4">Model Performance Metrics</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={prepareMetricsChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="model" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" domain={getMetricRange(prepareMetricsChartData(), ['Accuracy', 'Precision', 'Recall', 'F1 Score'])} tickFormatter={(value) => value.toFixed(1) + '%'} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '0.375rem',
-                    }}
-                    formatter={(value) => value.toFixed(2) + '%'}
-                  />
-                  <Legend />
-                  <Bar dataKey="Accuracy" fill="#10B981" />
-                  <Bar dataKey="Precision" fill="#3B82F6" />
-                  <Bar dataKey="Recall" fill="#F59E0B" />
-                  <Bar dataKey="F1 Score" fill="#EF4444" />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
           )}
 
